@@ -1,5 +1,5 @@
 alias: BSC Discovery
-description: "Constructs discovery MQTT messages to let Home Assistant create devices for connected serial BMS automatically"
+description: ""
 trigger:
   - platform: mqtt
     topic: bsc/bms/serial/+/valid
@@ -27,24 +27,19 @@ action:
                 trigger.topic.split('/')[3]}}/{{trigger.topic.split('/')[4]}}{{trigger.topic.split('/')[5]}}/config
               payload: |-
                 {
-                  "name": "Cell {{ trigger.topic.split('/')[5]}} Voltage",
+                  "name": "Cell {% if trigger.topic.split('/')[5]|int < 9 %}0{% else %}{% endif %}{{ trigger.topic.split('/')[5]|int +1}} Voltage",
                   "state_topic": "{{ trigger.topic }}",
                   "device_class": "voltage",
                   "state_class": "measurement",
                   "value_template": "{% raw %} {{ value|int / 1000 }} {% endraw %}",
                   "unit_of_measurement": "V",
-                  "unique_id": "bsc0_{{ trigger.topic.split('/')[2]}}_{{ trigger.topic.split('/')[3]}}_{{trigger.topic.split('/')[4]}}{{trigger.topic.split('/')[5]}}",
+                  "unique_id": "bsc0_{{ trigger.topic.split('/')[2]}}_{{ trigger.topic.split('/')[3]}}_{{trigger.topic.split('/')[4]}}{% if trigger.topic.split('/')[5]|int < 9 %}0{% else %}{% endif %}{{ trigger.topic.split('/')[5]|int +1}}",
                   "device": {
                     "identifiers": ["bsc0_{{ trigger.topic.split('/')[2]}}_{{ trigger.topic.split('/')[3]}}"],
                     "name": "BSC 0 {{ trigger.topic.split('/')[2]}} BMS {{ trigger.topic.split('/')[3]}}"
                   }
                 }
-            alias: cellVoltage0
-          - action: logbook.log
-            metadata: {}
-            data:
-              name: MQTT Payload
-              message: "{{ trigger.payload }}"
+            alias: cellVoltages
       - conditions:
           - condition: template
             value_template: "{{ trigger.topic.split('/')[4] != \"cellVoltage\" }}"
