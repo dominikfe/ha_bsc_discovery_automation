@@ -8,9 +8,40 @@ trigger:
   - platform: mqtt
     topic: bsc/bms/serial/+/cellVoltage/#
     enabled: true
+  - platform: mqtt
+    topic: bsc/bms/serial/+/temperature/#
+    enabled: true
 condition: []
 action:
   - choose:
+      - conditions:
+          - condition: and
+            conditions:
+              - condition: template
+                value_template: "{{ trigger.topic.split('/')[4] == \"temperature\" }}"
+        sequence:
+          - action: mqtt.publish
+            data:
+              qos: 0
+              topic: >-
+                homeassistant/sensor/bsc0_{{ trigger.topic.split('/')[2]}}{{
+                trigger.topic.split('/')[3]}}/{{trigger.topic.split('/')[4]}}{{trigger.topic.split('/')[5]}}/config
+              payload: |-
+                {
+                  "name": "Temperature Sensor {{ trigger.topic.split('/')[5]|int +1}}",
+                  "state_topic": "{{ trigger.topic }}",
+                  "device_class": "temperature",
+                  "state_class": "measurement",
+                  "value_template": "{% raw %} {{ value }} {% endraw %}",
+                  "unit_of_measurement": "°C",
+                  "unique_id": "bsc0_{{ trigger.topic.split('/')[2]}}_{{ trigger.topic.split('/')[3]}}_{{trigger.topic.split('/')[4]}}{{ trigger.topic.split('/')[5]|int +1}}",
+                  "device": {
+                    "identifiers": ["bsc0_{{ trigger.topic.split('/')[2]}}_{{ trigger.topic.split('/')[3]}}"],
+                    "name": "BSC 0 {{ trigger.topic.split('/')[2]}} BMS {{ trigger.topic.split('/')[3]}}"
+                  }
+                }
+            alias: Temperatures
+        alias: Temperatures
       - conditions:
           - condition: and
             conditions:
@@ -40,6 +71,7 @@ action:
                   }
                 }
             alias: cellVoltages
+        alias: CellVoltages
       - conditions:
           - condition: template
             value_template: "{{ trigger.topic.split('/')[4] != \"cellVoltage\" }}"
@@ -167,7 +199,7 @@ action:
                   {%- set attrib = "totalCurrent" -%}
                   "name": "Total Current",
                   "state_topic": "{{ trigger.topic.replace("valid", attrib)}}",
-                  "device_class": "power",
+                  "device_class": "current",
                   "state_class": "measurement",
                   "unit_of_measurement": "A",
                   "unique_id": "bsc0_{{ trigger.topic.split('/')[2]}}_{{ trigger.topic.split('/')[3]}}_{{ attrib}}",
@@ -177,4 +209,6 @@ action:
                   }
                 }
             alias: totalCurrent
-mode: single
+        alias: Rest
+mode: parallel
+max: 10
