@@ -1,18 +1,34 @@
 alias: BSC Discovery
 description: ""
-trigger:
-  - platform: mqtt
-    topic: bsc/bms/serial/+/valid
+triggers:
+  - topic: bsc/bms/serial/+/valid
     enabled: true
     payload: "1"
-  - platform: mqtt
-    topic: bsc/bms/serial/+/cellVoltage/#
+    trigger: mqtt
+    alias: Serial BMS Device
+  - alias: BT BMS Device
+    topic: bsc/bms/bt/+/valid
     enabled: true
-  - platform: mqtt
-    topic: bsc/bms/serial/+/temperature/#
+    payload: "1"
+    trigger: mqtt
+  - topic: bsc/bms/serial/+/cellVoltage/#
     enabled: true
-condition: []
-action:
+    trigger: mqtt
+    alias: Serial BMS Cell Voltages
+  - alias: BT BMS Cell Voltages
+    topic: bsc/bms/bt/+/cellVoltage/#
+    enabled: true
+    trigger: mqtt
+  - topic: bsc/bms/serial/+/temperature/#
+    enabled: true
+    trigger: mqtt
+    alias: Serial BMS Temperature
+  - alias: BT BMS Temperature
+    topic: bsc/bms/bt/+/temperature/#
+    enabled: true
+    trigger: mqtt
+conditions: []
+actions:
   - choose:
       - conditions:
           - condition: and
