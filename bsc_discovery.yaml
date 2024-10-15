@@ -85,7 +85,12 @@ actions:
                   "unique_id": "bsc0_{{ trigger.topic.split('/')[1]}}_{{ trigger.topic.split('/')[2]|int +1}}",
                   "device": {
                     "identifiers": ["bsc0"],
-                    "name": "BSC 0"
+                    "name": "BSC 0",
+                    "manufacturer": "BSC",
+                    "model": "BSC",
+                    "sw_version": "n/a",
+                    "hw_version": "n/a",
+                    "configuration_url": "http://bsc.my.home"
                   }
                 }
             alias: Temperatures
