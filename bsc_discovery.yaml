@@ -1,32 +1,19 @@
-alias: BSC Discovery
+alias: BSC discovery
 description: ""
 triggers:
-  - topic: bsc/bms/serial/+/valid
+  - topic: bsc/DataDevice/+/valid
     enabled: true
     payload: "1"
     trigger: mqtt
-    alias: Serial BMS Device
-  - alias: BT BMS Device
-    topic: bsc/bms/bt/+/valid
-    enabled: true
-    payload: "1"
-    trigger: mqtt
-  - topic: bsc/bms/serial/+/cellVoltage/#
+    alias: DataDevice
+  - topic: bsc/DataDevice/+/cellVoltage/#
     enabled: true
     trigger: mqtt
-    alias: Serial BMS Cell Voltages
-  - alias: BT BMS Cell Voltages
-    topic: bsc/bms/bt/+/cellVoltage/#
+    alias: Cell Voltages
+  - topic: bsc/DataDevice/+/temperature/#
     enabled: true
     trigger: mqtt
-  - topic: bsc/bms/serial/+/temperature/#
-    enabled: true
-    trigger: mqtt
-    alias: Serial BMS Temperature
-  - alias: BT BMS Temperature
-    topic: bsc/bms/bt/+/temperature/#
-    enabled: true
-    trigger: mqtt
+    alias: DataDevice Temperatures
   - alias: 1wire Temperature
     topic: bsc/temperatur/#
     enabled: true
@@ -38,7 +25,7 @@ actions:
           - condition: and
             conditions:
               - condition: template
-                value_template: "{{ trigger.topic.split('/')[4] == \"temperature\" }}"
+                value_template: "{{ trigger.topic.split('/')[3] == \"temperature\" }}"
         sequence:
           - action: mqtt.publish
             data:
@@ -48,44 +35,16 @@ actions:
                 trigger.topic.split('/')[3]}}/{{trigger.topic.split('/')[4]}}{{trigger.topic.split('/')[5]}}/config
               payload: |-
                 {
-                  "name": "Temperature Sensor {{ trigger.topic.split('/')[5]|int +1}}",
+                  "name": "Temperature Sensor {{ trigger.topic.split('/')[4]|int +1}}",
                   "state_topic": "{{ trigger.topic }}",
                   "device_class": "temperature",
                   "state_class": "measurement",
                   "value_template": "{% raw %} {{ value }} {% endraw %}",
                   "unit_of_measurement": "°C",
-                  "unique_id": "bsc0_{{ trigger.topic.split('/')[2]}}_{{ trigger.topic.split('/')[3]}}_{{trigger.topic.split('/')[4]}}{{ trigger.topic.split('/')[5]|int +1}}",
+                  "unique_id": "bsc_{{ trigger.topic.split('/')[2]}}_{{ trigger.topic.split('/')[3]}}_{{trigger.topic.split('/')[4]|int +1}}",
                   "device": {
-                    "identifiers": ["bsc0_{{ trigger.topic.split('/')[2]}}_{{ trigger.topic.split('/')[3]}}"],
-                    "name": "BSC 0 {{ trigger.topic.split('/')[2]}} BMS {{ trigger.topic.split('/')[3]}}"
-                  }
-                }
-            alias: Temperatures
-        alias: Temperatures
-      - conditions:
-          - condition: and
-            conditions:
-              - condition: template
-                value_template: "{{ trigger.topic.split('/')[1] == \"temperatur\" }}"
-        sequence:
-          - action: mqtt.publish
-            data:
-              qos: 0
-              topic: >-
-                homeassistant/sensor/bsc0_{{ trigger.topic.split('/')[1]}}{{
-                trigger.topic.split('/')[2]}}/config
-              payload: |-
-                {
-                  "name": "1wire Temperature Sensor {{ trigger.topic.split('/')[2]|int +1}}",
-                  "state_topic": "{{ trigger.topic }}",
-                  "device_class": "temperature",
-                  "state_class": "measurement",
-                  "value_template": "{% raw %} {{ value }} {% endraw %}",
-                  "unit_of_measurement": "°C",
-                  "unique_id": "bsc0_{{ trigger.topic.split('/')[1]}}_{{ trigger.topic.split('/')[2]|int +1}}",
-                  "device": {
-                    "identifiers": ["bsc0"],
-                    "name": "BSC 0",
+                    "identifiers": ["bsc_{{ trigger.topic.split('/')[1]}}_{{ trigger.topic.split('/')[2]}}"],
+                    "name": "BSC {{ trigger.topic.split('/')[1]}} {{ trigger.topic.split('/')[2]}}",
                     "manufacturer": "BSC",
                     "model": "BSC",
                     "sw_version": "n/a",
@@ -94,14 +53,14 @@ actions:
                   }
                 }
             alias: Temperatures
-        alias: 1wire Temperatures
+        alias: Temperatures
       - conditions:
           - condition: and
             conditions:
               - condition: template
                 value_template: "{{ trigger.payload != '0' }}"
               - condition: template
-                value_template: "{{ trigger.topic.split('/')[4] == \"cellVoltage\" }}"
+                value_template: "{{ trigger.topic.split('/')[3] == \"cellVoltage\" }}"
         sequence:
           - action: mqtt.publish
             data:
@@ -111,23 +70,23 @@ actions:
                 trigger.topic.split('/')[3]}}/{{trigger.topic.split('/')[4]}}{{trigger.topic.split('/')[5]}}/config
               payload: |-
                 {
-                  "name": "Cell {% if trigger.topic.split('/')[5]|int < 9 %}0{% else %}{% endif %}{{ trigger.topic.split('/')[5]|int +1}} Voltage",
+                  "name": "Cell {% if trigger.topic.split('/')[4]|int < 9 %}0{% else %}{% endif %}{{ trigger.topic.split('/')[4]|int +1}} Voltage",
                   "state_topic": "{{ trigger.topic }}",
                   "device_class": "voltage",
                   "state_class": "measurement",
                   "value_template": "{% raw %} {{ value|int / 1000 }} {% endraw %}",
                   "unit_of_measurement": "V",
-                  "unique_id": "bsc0_{{ trigger.topic.split('/')[2]}}_{{ trigger.topic.split('/')[3]}}_{{trigger.topic.split('/')[4]}}{% if trigger.topic.split('/')[5]|int < 9 %}0{% else %}{% endif %}{{ trigger.topic.split('/')[5]|int +1}}",
+                  "unique_id": "bsc__{{ trigger.topic.split('/')[2]}}_{{trigger.topic.split('/')[3]}}{% if trigger.topic.split('/')[4]|int < 9 %}0{% else %}{% endif %}{{ trigger.topic.split('/')[4]|int +1}}",
                   "device": {
-                    "identifiers": ["bsc0_{{ trigger.topic.split('/')[2]}}_{{ trigger.topic.split('/')[3]}}"],
-                    "name": "BSC 0 {{ trigger.topic.split('/')[2]}} BMS {{ trigger.topic.split('/')[3]}}"
+                    "identifiers": ["bsc_{{ trigger.topic.split('/')[1]}}_{{ trigger.topic.split('/')[2]}}"],
+                    "name": "BSC {{ trigger.topic.split('/')[1]}} {{ trigger.topic.split('/')[2]}}"
                   }
                 }
             alias: cellVoltages
         alias: CellVoltages
       - conditions:
           - condition: template
-            value_template: "{{ trigger.topic.split('/')[4] != \"cellVoltage\" }}"
+            value_template: "{{ trigger.topic.split('/')[3] != \"cellVoltage\" }}"
         sequence:
           - action: mqtt.publish
             data:
@@ -143,9 +102,9 @@ actions:
                   "device_class": "battery",
                   "state_class": "measurement",
                   "unit_of_measurement": "%",
-                  "unique_id": "bsc0_{{ trigger.topic.split('/')[2]}}_{{ trigger.topic.split('/')[3]}}_{{ attrib}}",
+                  "unique_id": "bsc_{{ trigger.topic.split('/')[2]}}_{{ trigger.topic.split('/')[3]}}_{{ attrib}}",
                   "device": {
-                    "identifiers": ["bsc0_{{ trigger.topic.split('/')[2]}}_{{ trigger.topic.split('/')[3]}}"]
+                    "identifiers": ["bsc_{{ trigger.topic.split('/')[1]}}_{{ trigger.topic.split('/')[2]}}"]
                   }
                 }
             alias: SoC
@@ -165,13 +124,7 @@ actions:
                   "unit_of_measurement": "V",
                   "unique_id": "bsc0_{{ trigger.topic.split('/')[2]}}_{{ trigger.topic.split('/')[3]}}_{{ attrib}}",
                   "device": {
-                    "identifiers": ["bsc0_{{ trigger.topic.split('/')[2]}}_{{ trigger.topic.split('/')[3]}}"],
-                    "name": "BSC 0 {{ trigger.topic.split('/')[2]}} BMS {{ trigger.topic.split('/')[3]}}",
-                    "manufacturer": "BSC",
-                    "model": "BSC",
-                    "sw_version": "n/a",
-                    "hw_version": "n/a",
-                    "configuration_url": "http://bsc.my.home"
+                    "identifiers": ["bsc_{{ trigger.topic.split('/')[1]}}_{{ trigger.topic.split('/')[2]}}"]
                   }
                 }
             alias: totalVoltage
@@ -192,8 +145,7 @@ actions:
                   "value_template": "{% raw %} {{ value|int / 1000 }} {% endraw %}",
                   "unique_id": "bsc0_{{ trigger.topic.split('/')[2]}}_{{ trigger.topic.split('/')[3]}}_{{ attrib}}",
                   "device": {
-                    "identifiers": ["bsc0_{{ trigger.topic.split('/')[2]}}_{{ trigger.topic.split('/')[3]}}"],
-                    "name": "BSC 0 {{ trigger.topic.split('/')[2]}} BMS {{ trigger.topic.split('/')[3]}}"
+                    "identifiers": ["bsc_{{ trigger.topic.split('/')[1]}}_{{ trigger.topic.split('/')[2]}}"]
                   }
                 }
             alias: cellVoltageMax
@@ -214,8 +166,7 @@ actions:
                   "value_template": "{% raw %} {{ value|int / 1000 }} {% endraw %}",
                   "unique_id": "bsc0_{{ trigger.topic.split('/')[2]}}_{{ trigger.topic.split('/')[3]}}_{{ attrib}}",
                   "device": {
-                    "identifiers": ["bsc0_{{ trigger.topic.split('/')[2]}}_{{ trigger.topic.split('/')[3]}}"],
-                    "name": "BSC 0 {{ trigger.topic.split('/')[2]}} BMS {{ trigger.topic.split('/')[3]}}"
+                    "identifiers": ["bsc_{{ trigger.topic.split('/')[1]}}_{{ trigger.topic.split('/')[2]}}"]
                   }
                 }
             alias: cellVoltageMin
@@ -236,8 +187,7 @@ actions:
                   "unit_of_measurement": "V",
                   "unique_id": "bsc0_{{ trigger.topic.split('/')[2]}}_{{ trigger.topic.split('/')[3]}}_{{ attrib}}",
                   "device": {
-                    "identifiers": ["bsc0_{{ trigger.topic.split('/')[2]}}_{{ trigger.topic.split('/')[3]}}"],
-                    "name": "BSC 0 {{ trigger.topic.split('/')[2]}} BMS {{ trigger.topic.split('/')[3]}}"
+                    "identifiers": ["bsc_{{ trigger.topic.split('/')[1]}}_{{ trigger.topic.split('/')[2]}}"]
                   }
                 }
             alias: maxCellDifferenceVoltage
@@ -257,8 +207,7 @@ actions:
                   "unit_of_measurement": "A",
                   "unique_id": "bsc0_{{ trigger.topic.split('/')[2]}}_{{ trigger.topic.split('/')[3]}}_{{ attrib}}",
                   "device": {
-                    "identifiers": ["bsc0_{{ trigger.topic.split('/')[2]}}_{{ trigger.topic.split('/')[3]}}"],
-                    "name": "BSC 0 {{ trigger.topic.split('/')[2]}} BMS {{ trigger.topic.split('/')[3]}}"
+                    "identifiers": ["bsc_{{ trigger.topic.split('/')[1]}}_{{ trigger.topic.split('/')[2]}}"]
                   }
                 }
             alias: totalCurrent
