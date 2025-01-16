@@ -1,38 +1,77 @@
-alias: BSC discovery
+alias: BSC discovery new
 description: ""
 triggers:
-  - topic: bsc/DataDevice/+/valid
+  - alias: DataDevice
+    topic: bsc/DataDevice/+/+
     enabled: true
-    payload: "1"
     trigger: mqtt
-    alias: DataDevice
+    id: DataDevice
   - topic: bsc/DataDevice/+/cellVoltage/#
     enabled: true
     trigger: mqtt
     alias: Cell Voltages
+    id: CellVoltages
   - topic: bsc/DataDevice/+/temperature/#
     enabled: true
     trigger: mqtt
     alias: DataDevice Temperatures
+    id: DataDeviceTemperatures
   - alias: 1wire Temperature
     topic: bsc/temperatur/#
     enabled: true
     trigger: mqtt
+    id: 1WireTemperature
+  - alias: Inverter
+    topic: bsc/inverter/#
+    enabled: true
+    trigger: mqtt
+    id: Inverter
 conditions: []
 actions:
   - choose:
       - conditions:
-          - condition: and
-            conditions:
-              - condition: template
-                value_template: "{{ trigger.topic.split('/')[3] == \"temperature\" }}"
+          - condition: trigger
+            id:
+              - Inverter
         sequence:
           - action: mqtt.publish
             data:
               qos: 0
               topic: >-
-                homeassistant/sensor/bsc0_{{ trigger.topic.split('/')[2]}}{{
-                trigger.topic.split('/')[3]}}/{{trigger.topic.split('/')[4]}}{{trigger.topic.split('/')[5]}}/config
+                homeassistant/sensor/{{ trigger.topic.split('/')[0]}}_{{
+                trigger.topic.split('/')[1]}}_{{
+                trigger.topic.split('/')[2]}}/config
+              payload: |-
+                {
+                  "name": "{{trigger.topic.split('/')[2]}}",
+                  "state_topic": "{{ trigger.topic }}",
+                  "device_class": "battery",
+                  "state_class": "measurement",
+                  "unit_of_measurement": "{% if trigger.topic.split('/')[2] == "SoC" %}%{% endif %}{% if trigger.topic.split('/')[2] == "temperature" %}°C{% endif %}{% if trigger.topic.split('/')[2] == "totalVoltage" or trigger.topic.split('/')[2] == "chargeVoltage" %}V{% endif %}{% if trigger.topic.split('/')[2] == "chargeCurrentSoll" or trigger.topic.split('/')[2] == "dischargeCurrentSoll" or trigger.topic.split('/')[2] == "totalCurrent"%}A{% endif %}",
+                  "unique_id": "{{ trigger.topic.split('/')[0]}}_{{ trigger.topic.split('/')[1]}}_{{ trigger.topic.split('/')[2]}}",
+                  "device": {
+                    "identifiers": ["bsc_{{ trigger.topic.split('/')[0]}}"],
+                    "name": "BSC",
+                    "manufacturer": "BSC",
+                    "model": "BSC",
+                    "sw_version": "n/a",
+                    "hw_version": "n/a",
+                    "configuration_url": "https://github.com/dominikfe/ha_bsc_discovery_automation"
+                  }
+                }
+            alias: Inverter
+        alias: Inverter
+      - conditions:
+          - condition: trigger
+            id:
+              - DataDeviceTemperatures
+        sequence:
+          - action: mqtt.publish
+            data:
+              qos: 0
+              topic: >-
+                homeassistant/sensor/{{ trigger.topic.split('/')[0]}}{{
+                trigger.topic.split('/')[1]}}{{trigger.topic.split('/')[2]}}/{{trigger.topic.split('/')[3]}}{{trigger.topic.split('/')[4]}}/config
               payload: |-
                 {
                   "name": "Temperature Sensor {{ trigger.topic.split('/')[4]|int +1}}",
@@ -41,15 +80,15 @@ actions:
                   "state_class": "measurement",
                   "value_template": "{% raw %} {{ value }} {% endraw %}",
                   "unit_of_measurement": "°C",
-                  "unique_id": "bsc_{{ trigger.topic.split('/')[2]}}_{{ trigger.topic.split('/')[3]}}_{{trigger.topic.split('/')[4]|int +1}}",
+                  "unique_id": "{{trigger.topic.split('/')[0]}}_{{trigger.topic.split('/')[1]}}_{{trigger.topic.split('/')[2]}}_{{trigger.topic.split('/')[3]}}_{{trigger.topic.split('/')[4]}}",
                   "device": {
-                    "identifiers": ["bsc_{{ trigger.topic.split('/')[1]}}_{{ trigger.topic.split('/')[2]}}"],
-                    "name": "BSC {{ trigger.topic.split('/')[1]}} {{ trigger.topic.split('/')[2]}}",
+                    "identifiers": ["{{trigger.topic.split('/')[0]}}_{{trigger.topic.split('/')[1]}}_{{trigger.topic.split('/')[2]}}"],
+                    "name": "BSC {{trigger.topic.split('/')[1]}} {{trigger.topic.split('/')[2]}}",
                     "manufacturer": "BSC",
                     "model": "BSC",
                     "sw_version": "n/a",
                     "hw_version": "n/a",
-                    "configuration_url": "http://bsc.my.home"
+                    "configuration_url": "https://github.com/dominikfe/ha_bsc_discovery_automation"
                   }
                 }
             alias: Temperatures
@@ -59,15 +98,16 @@ actions:
             conditions:
               - condition: template
                 value_template: "{{ trigger.payload != '0' }}"
-              - condition: template
-                value_template: "{{ trigger.topic.split('/')[3] == \"cellVoltage\" }}"
+          - condition: trigger
+            id:
+              - CellVoltages
         sequence:
           - action: mqtt.publish
             data:
               qos: 0
               topic: >-
-                homeassistant/sensor/bsc0_{{ trigger.topic.split('/')[2]}}{{
-                trigger.topic.split('/')[3]}}/{{trigger.topic.split('/')[4]}}{{trigger.topic.split('/')[5]}}/config
+                homeassistant/sensor/{{
+                trigger.topic.split('/')[0]}}{{trigger.topic.split('/')[1]}}{{trigger.topic.split('/')[2]}}/{{trigger.topic.split('/')[3]}}{{trigger.topic.split('/')[4]}}{{trigger.topic.split('/')[5]}}/config
               payload: |-
                 {
                   "name": "Cell {% if trigger.topic.split('/')[4]|int < 9 %}0{% else %}{% endif %}{{ trigger.topic.split('/')[4]|int +1}} Voltage",
@@ -76,141 +116,50 @@ actions:
                   "state_class": "measurement",
                   "value_template": "{% raw %} {{ value|int / 1000 }} {% endraw %}",
                   "unit_of_measurement": "V",
-                  "unique_id": "bsc__{{ trigger.topic.split('/')[2]}}_{{trigger.topic.split('/')[3]}}{% if trigger.topic.split('/')[4]|int < 9 %}0{% else %}{% endif %}{{ trigger.topic.split('/')[4]|int +1}}",
+                  "unique_id": "{{ trigger.topic.split('/')[0]}}_{{ trigger.topic.split('/')[1]}}_{{ trigger.topic.split('/')[2]}}_{{trigger.topic.split('/')[3]}}{% if trigger.topic.split('/')[4]|int < 9 %}0{% else %}{% endif %}{{ trigger.topic.split('/')[4]|int +1}}",
                   "device": {
-                    "identifiers": ["bsc_{{ trigger.topic.split('/')[1]}}_{{ trigger.topic.split('/')[2]}}"],
-                    "name": "BSC {{ trigger.topic.split('/')[1]}} {{ trigger.topic.split('/')[2]}}"
+                    "identifiers": ["{{trigger.topic.split('/')[0]}}_{{trigger.topic.split('/')[1]}}_{{trigger.topic.split('/')[2]}}"],
+                    "name": "BSC {{trigger.topic.split('/')[1]}} {{trigger.topic.split('/')[2]}}",
+                    "manufacturer": "BSC",
+                    "model": "BSC",
+                    "sw_version": "n/a",
+                    "hw_version": "n/a",
+                    "configuration_url": "https://github.com/dominikfe/ha_bsc_discovery_automation"
                   }
                 }
             alias: cellVoltages
         alias: CellVoltages
       - conditions:
           - condition: template
-            value_template: "{{ trigger.topic.split('/')[3] != \"cellVoltage\" }}"
+            value_template: >-
+              {{ trigger.topic.split('/')[3] != "cellVoltage" and
+              trigger.topic.split('/')[3] != "valid"}}
         sequence:
           - action: mqtt.publish
             data:
               qos: 0
               topic: >-
-                homeassistant/sensor/bsc0_{{ trigger.topic.split('/')[2]}}{{
-                trigger.topic.split('/')[3]}}/SoC/config
+                homeassistant/sensor/{{
+                trigger.topic.split('/')[0]}}{{trigger.topic.split('/')[1]}}{{trigger.topic.split('/')[2]}}/{{trigger.topic.split('/')[3]}}/config
               payload: |-
                 {
-                  {%- set attrib = "SoC" -%}
-                  "name": "SoC",
-                  "state_topic": "{{ trigger.topic.replace("valid", attrib)}}",
+                  "name": "{{trigger.topic.split('/')[3]}}",
+                  "state_topic": "{{ trigger.topic}}",
                   "device_class": "battery",
                   "state_class": "measurement",
-                  "unit_of_measurement": "%",
-                  "unique_id": "bsc_{{ trigger.topic.split('/')[2]}}_{{ trigger.topic.split('/')[3]}}_{{ attrib}}",
+                  "unit_of_measurement": "{% if "Current" in trigger.topic.split('/')[3] %}A{% endif %}{% if "Voltage" in trigger.topic.split('/')[3] %}V{% endif %}{% if "SoC" in trigger.topic.split('/')[3] %}%{% endif %}",
+                  "unique_id": "bsc_{{ trigger.topic.split('/')[2]}}_{{ trigger.topic.split('/')[3]}}",
                   "device": {
-                    "identifiers": ["bsc_{{ trigger.topic.split('/')[1]}}_{{ trigger.topic.split('/')[2]}}"]
+                    "identifiers": ["{{trigger.topic.split('/')[0]}}_{{trigger.topic.split('/')[1]}}_{{trigger.topic.split('/')[2]}}"],
+                    "name": "BSC {{trigger.topic.split('/')[1]}} {{trigger.topic.split('/')[2]}}",
+                    "manufacturer": "BSC",
+                    "model": "BSC",
+                    "sw_version": "n/a",
+                    "hw_version": "n/a",
+                    "configuration_url": "https://github.com/dominikfe/ha_bsc_discovery_automation"
                   }
                 }
-            alias: SoC
-          - action: mqtt.publish
-            data:
-              qos: 0
-              topic: >-
-                homeassistant/sensor/bsc0_{{ trigger.topic.split('/')[2]}}{{
-                trigger.topic.split('/')[3]}}/totalVoltage/config
-              payload: |-
-                {
-                  {%- set attrib = "totalVoltage" -%}
-                  "name": "Total Voltage",
-                  "state_topic": "{{ trigger.topic.replace("valid", attrib)}}",
-                  "device_class": "voltage",
-                  "state_class": "measurement",
-                  "unit_of_measurement": "V",
-                  "unique_id": "bsc0_{{ trigger.topic.split('/')[2]}}_{{ trigger.topic.split('/')[3]}}_{{ attrib}}",
-                  "device": {
-                    "identifiers": ["bsc_{{ trigger.topic.split('/')[1]}}_{{ trigger.topic.split('/')[2]}}"]
-                  }
-                }
-            alias: totalVoltage
-          - action: mqtt.publish
-            data:
-              qos: 0
-              topic: >-
-                homeassistant/sensor/bsc0_{{ trigger.topic.split('/')[2]}}{{
-                trigger.topic.split('/')[3]}}/cellVoltageMax/config
-              payload: |-
-                {
-                  {%- set attrib = "cellVoltageMax" -%}
-                  "name": "Max Cell Voltage",
-                  "state_topic": "{{ trigger.topic.replace("valid", attrib)}}",
-                  "device_class": "voltage",
-                  "state_class": "measurement",
-                  "unit_of_measurement": "V",
-                  "value_template": "{% raw %} {{ value|int / 1000 }} {% endraw %}",
-                  "unique_id": "bsc0_{{ trigger.topic.split('/')[2]}}_{{ trigger.topic.split('/')[3]}}_{{ attrib}}",
-                  "device": {
-                    "identifiers": ["bsc_{{ trigger.topic.split('/')[1]}}_{{ trigger.topic.split('/')[2]}}"]
-                  }
-                }
-            alias: cellVoltageMax
-          - action: mqtt.publish
-            data:
-              qos: 0
-              topic: >-
-                homeassistant/sensor/bsc0_{{ trigger.topic.split('/')[2]}}{{
-                trigger.topic.split('/')[3]}}/cellVoltageMin/config
-              payload: |-
-                {
-                  {%- set attrib = "cellVoltageMin" -%}
-                  "name": "Min Cell Voltage",
-                  "state_topic": "{{ trigger.topic.replace("valid", attrib)}}",
-                  "device_class": "voltage",
-                  "state_class": "measurement",
-                  "unit_of_measurement": "V",
-                  "value_template": "{% raw %} {{ value|int / 1000 }} {% endraw %}",
-                  "unique_id": "bsc0_{{ trigger.topic.split('/')[2]}}_{{ trigger.topic.split('/')[3]}}_{{ attrib}}",
-                  "device": {
-                    "identifiers": ["bsc_{{ trigger.topic.split('/')[1]}}_{{ trigger.topic.split('/')[2]}}"]
-                  }
-                }
-            alias: cellVoltageMin
-          - action: mqtt.publish
-            data:
-              qos: 0
-              topic: >-
-                homeassistant/sensor/bsc0_{{ trigger.topic.split('/')[2]}}{{
-                trigger.topic.split('/')[3]}}/maxCellDifferenceVoltage/config
-              payload: |-
-                {
-                  {%- set attrib = "maxCellDifferenceVoltage" -%}
-                  "name": "Delta Voltage",
-                  "state_topic": "{{ trigger.topic.replace("valid", attrib)}}",
-                  "device_class": "voltage",
-                  "state_class": "measurement",
-                  "value_template": "{% raw %} {{ value|int / 1000 }} {% endraw %}",
-                  "unit_of_measurement": "V",
-                  "unique_id": "bsc0_{{ trigger.topic.split('/')[2]}}_{{ trigger.topic.split('/')[3]}}_{{ attrib}}",
-                  "device": {
-                    "identifiers": ["bsc_{{ trigger.topic.split('/')[1]}}_{{ trigger.topic.split('/')[2]}}"]
-                  }
-                }
-            alias: maxCellDifferenceVoltage
-          - action: mqtt.publish
-            data:
-              qos: 0
-              topic: >-
-                homeassistant/sensor/bsc0_{{ trigger.topic.split('/')[2]}}{{
-                trigger.topic.split('/')[3]}}/totalCurrent/config
-              payload: |-
-                {
-                  {%- set attrib = "totalCurrent" -%}
-                  "name": "Total Current",
-                  "state_topic": "{{ trigger.topic.replace("valid", attrib)}}",
-                  "device_class": "current",
-                  "state_class": "measurement",
-                  "unit_of_measurement": "A",
-                  "unique_id": "bsc0_{{ trigger.topic.split('/')[2]}}_{{ trigger.topic.split('/')[3]}}_{{ attrib}}",
-                  "device": {
-                    "identifiers": ["bsc_{{ trigger.topic.split('/')[1]}}_{{ trigger.topic.split('/')[2]}}"]
-                  }
-                }
-            alias: totalCurrent
+            alias: Rest
         alias: Rest
 mode: parallel
 max: 10
