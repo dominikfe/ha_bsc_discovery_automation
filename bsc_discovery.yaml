@@ -50,8 +50,9 @@ actions:
                 {
                   "name": "{{trigger.topic.split('/')[2]}}",
                   "state_topic": "{{ trigger.topic }}",
-                  "device_class": "{% set d = { 'chargeCurrentSoll': 'current', 'chargeVoltage': 'voltage', 'dischargeCurrentSoll': 'current', 'SoC': 'battery', 'temperature': 'temperature', 'totalCurrent': 'current', 'totalVoltage': 'voltage',} %} {{ d.get( trigger.topic.split('/')[2], 'none' ) }}",
+                  {% set d = { 'SoC': 'battery', 'chargeCurrentSoll': 'current', 'chargeVoltage': 'voltage', 'dischargeCurrentSoll': 'current', 'SoC': 'battery', 'temperature': 'temperature', 'totalCurrent': 'current', 'totalVoltage': 'voltage',} %}{% if d.get( trigger.topic.split('/')[2],'') %}"device_class":"{{ d.get( trigger.topic.split('/')[2]) }}",{% endif %}
                   "state_class": "measurement",
+                  "unit_of_measurement": "{% set d = { 'chargeCurrentSoll': 'A', 'chargeVoltage': 'V', 'dischargeCurrentSoll': 'A', 'SoC': '%', 'temperature': '°C', 'totalCurrent': 'A', 'totalVoltage': 'V',} %}{{ d.get( trigger.topic.split('/')[2],'' ) }}",
                   "unique_id": "{{ trigger.topic.split('/')[0]}}_{{ trigger.topic.split('/')[1]}}_{{ trigger.topic.split('/')[2]}}",
                   "device": {
                     "identifiers": ["bsc_{{ trigger.topic.split('/')[0]}}"],
@@ -179,9 +180,9 @@ actions:
                 {
                   "name": "{{trigger.topic.split('/')[3]}}",
                   "state_topic": "{{ trigger.topic}}",
-                  "device_class": "battery",
+                  {% set d = { 'SoC': 'battery', 'balancingCurrent': 'current', 'cellVoltageMax': 'voltage', 'cellVoltageMin': 'voltage', 'cellVoltageMax': 'voltage', 'maxCellDifferenceVoltage': 'voltage', 'totalCurrent': 'current', 'totalVoltage': 'voltage'} %}{% if d.get( trigger.topic.split('/')[3],'') %}"device_class":"{{ d.get( trigger.topic.split('/')[3]) }}",{% endif %}      
                   "state_class": "measurement",
-                  "unit_of_measurement": "{% if "Current" in trigger.topic.split('/')[3] %}A{% endif %}{% if "maxCellDifferenceVoltage" in trigger.topic.split('/')[3] %}mV{% endif %}{% if "totalVoltage" in trigger.topic.split('/')[3] %}V{% endif %}{% if "SoC" in trigger.topic.split('/')[3] %}%{% endif %}",
+                  "unit_of_measurement": "{% set d = {'SoC': '%', 'balancingCurrent': 'A', 'cellVoltageMax': 'V', 'cellVoltageMin': 'V', 'cellVoltageMax': 'V', 'maxCellDifferenceVoltage': 'mV', 'totalCurrent': 'A', 'totalVoltage': 'V'} %}{{ d.get( trigger.topic.split('/')[3],'') }}",
                   "unique_id": "bsc_{{ trigger.topic.split('/')[2]}}_{{ trigger.topic.split('/')[3]}}",
                   "device": {
                     "identifiers": ["{{trigger.topic.split('/')[0]}}_{{trigger.topic.split('/')[1]}}_{{trigger.topic.split('/')[2]}}"],
