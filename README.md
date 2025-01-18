@@ -1,5 +1,10 @@
 Changelog:
 
+18.01.2025
+- Triggers now appear under BSC device
+- all entities of BSC now get the correct DeviceClass to avoid HomeAssistant warnings in log and get the right unit
+- unit of maxCellDifferenceVoltage corrected to 'mV' (in DataDevice)
+
 15.01.2025
 - update to new MQTT layout with DataDevice name in topic
 - Inverter topics to come
