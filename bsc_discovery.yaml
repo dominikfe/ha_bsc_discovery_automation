@@ -1,4 +1,4 @@
-alias: BSC discovery new
+alias: BSC discovery
 description: ""
 triggers:
   - alias: DataDevice
@@ -26,6 +26,11 @@ triggers:
     enabled: true
     trigger: mqtt
     id: Inverter
+  - alias: Trigger
+    topic: bsc/trigger/#
+    enabled: true
+    trigger: mqtt
+    id: Trigger
 conditions: []
 actions:
   - choose:
@@ -38,16 +43,15 @@ actions:
             data:
               qos: 0
               topic: >-
-                homeassistant/sensor/{{ trigger.topic.split('/')[0]}}_{{
+                homeassistant/sensor/{{ trigger.topic.split('/')[0]}}/{{
                 trigger.topic.split('/')[1]}}_{{
                 trigger.topic.split('/')[2]}}/config
               payload: |-
                 {
                   "name": "{{trigger.topic.split('/')[2]}}",
                   "state_topic": "{{ trigger.topic }}",
-                  "device_class": "battery",
+                  "device_class": "{% set d = { 'chargeCurrentSoll': 'current', 'chargeVoltage': 'voltage', 'dischargeCurrentSoll': 'current', 'SoC': 'battery', 'temperature': 'temperature', 'totalCurrent': 'current', 'totalVoltage': 'voltage',} %} {{ d.get( trigger.topic.split('/')[2], 'none' ) }}",
                   "state_class": "measurement",
-                  "unit_of_measurement": "{% if trigger.topic.split('/')[2] == "SoC" %}%{% endif %}{% if trigger.topic.split('/')[2] == "temperature" %}°C{% endif %}{% if trigger.topic.split('/')[2] == "totalVoltage" or trigger.topic.split('/')[2] == "chargeVoltage" %}V{% endif %}{% if trigger.topic.split('/')[2] == "chargeCurrentSoll" or trigger.topic.split('/')[2] == "dischargeCurrentSoll" or trigger.topic.split('/')[2] == "totalCurrent"%}A{% endif %}",
                   "unique_id": "{{ trigger.topic.split('/')[0]}}_{{ trigger.topic.split('/')[1]}}_{{ trigger.topic.split('/')[2]}}",
                   "device": {
                     "identifiers": ["bsc_{{ trigger.topic.split('/')[0]}}"],
@@ -61,6 +65,36 @@ actions:
                 }
             alias: Inverter
         alias: Inverter
+      - conditions:
+          - condition: trigger
+            id:
+              - Trigger
+        sequence:
+          - action: mqtt.publish
+            data:
+              qos: 0
+              topic: >-
+                homeassistant/sensor/{{ trigger.topic.split('/')[0]}}/{{
+                trigger.topic.split('/')[1]}}_{{
+                trigger.topic.split('/')[2]}}/config
+              payload: |-
+                {
+                  "name": "Trigger {{trigger.topic.split('/')[2]}}",
+                  "state_topic": "{{ trigger.topic }}",
+                  "state_color": "true",
+                  "unique_id": "{{ trigger.topic.split('/')[0]}}_{{ trigger.topic.split('/')[1]}}_{{ trigger.topic.split('/')[2]}}",
+                  "device": {
+                    "identifiers": ["bsc_{{ trigger.topic.split('/')[0]}}"],
+                    "name": "BSC",
+                    "manufacturer": "BSC",
+                    "model": "BSC",
+                    "sw_version": "n/a",
+                    "hw_version": "n/a",
+                    "configuration_url": "https://github.com/dominikfe/ha_bsc_discovery_automation"
+                  }
+                }
+            alias: Inverter
+        alias: Trigger
       - conditions:
           - condition: trigger
             id:
@@ -147,7 +181,7 @@ actions:
                   "state_topic": "{{ trigger.topic}}",
                   "device_class": "battery",
                   "state_class": "measurement",
-                  "unit_of_measurement": "{% if "Current" in trigger.topic.split('/')[3] %}A{% endif %}{% if "Voltage" in trigger.topic.split('/')[3] %}V{% endif %}{% if "SoC" in trigger.topic.split('/')[3] %}%{% endif %}",
+                  "unit_of_measurement": "{% if "Current" in trigger.topic.split('/')[3] %}A{% endif %}{% if "maxCellDifferenceVoltage" in trigger.topic.split('/')[3] %}mV{% endif %}{% if "totalVoltage" in trigger.topic.split('/')[3] %}V{% endif %}{% if "SoC" in trigger.topic.split('/')[3] %}%{% endif %}",
                   "unique_id": "bsc_{{ trigger.topic.split('/')[2]}}_{{ trigger.topic.split('/')[3]}}",
                   "device": {
                     "identifiers": ["{{trigger.topic.split('/')[0]}}_{{trigger.topic.split('/')[1]}}_{{trigger.topic.split('/')[2]}}"],
