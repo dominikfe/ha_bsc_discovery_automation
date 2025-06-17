@@ -1,5 +1,9 @@
 Changelog:
 
+17.06.2025
+- added retain flag to all mqtt.publish actions to retain all learned objects even if automation is disabled and HA is restarded.
+- fixed display precision of cell voltages
+
 18.01.2025
 - Triggers now appear under BSC device
 - all entities of BSC now get the correct DeviceClass to avoid HomeAssistant warnings in log and get the right unit
