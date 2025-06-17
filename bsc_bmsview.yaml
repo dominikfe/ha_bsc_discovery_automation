@@ -1,206 +1,554 @@
-alias: BSC discovery
-description: ""
-triggers:
-  - alias: DataDevice
-    topic: bsc/DataDevice/+/+
-    enabled: true
-    trigger: mqtt
-    id: DataDevice
-  - topic: bsc/DataDevice/+/cellVoltage/#
-    enabled: true
-    trigger: mqtt
-    alias: Cell Voltages
-    id: CellVoltages
-  - topic: bsc/DataDevice/+/temperature/#
-    enabled: true
-    trigger: mqtt
-    alias: DataDevice Temperatures
-    id: DataDeviceTemperatures
-  - alias: 1wire Temperature
-    topic: bsc/temperatur/#
-    enabled: true
-    trigger: mqtt
-    id: 1WireTemperature
-  - alias: Inverter
-    topic: bsc/inverter/#
-    enabled: true
-    trigger: mqtt
-    id: Inverter
-  - alias: Trigger
-    topic: bsc/trigger/#
-    enabled: true
-    trigger: mqtt
-    id: Trigger
-conditions: []
-actions:
-  - choose:
-      - conditions:
-          - condition: trigger
-            id:
-              - Inverter
-        sequence:
-          - action: mqtt.publish
-            data:
-              qos: 0
-              topic: >-
-                homeassistant/sensor/{{ trigger.topic.split('/')[0]}}/{{
-                trigger.topic.split('/')[1]}}_{{
-                trigger.topic.split('/')[2]}}/config
-              retain: true
-              payload: |-
-                {
-                  "name": "{{trigger.topic.split('/')[2]}}",
-                  "state_topic": "{{ trigger.topic }}",
-                  {% set d = { 'SoC': 'battery', 'chargeCurrentSoll': 'current', 'chargeVoltage': 'voltage', 'dischargeCurrentSoll': 'current', 'SoC': 'battery', 'temperature': 'temperature', 'totalCurrent': 'current', 'totalVoltage': 'voltage',} %}{% if d.get( trigger.topic.split('/')[2],'') %}"device_class":"{{ d.get( trigger.topic.split('/')[2]) }}",{% endif %}
-                  "state_class": "measurement",
-                  "unit_of_measurement": "{% set d = { 'chargeCurrentSoll': 'A', 'chargeVoltage': 'V', 'dischargeCurrentSoll': 'A', 'SoC': '%', 'temperature': '°C', 'totalCurrent': 'A', 'totalVoltage': 'V',} %}{{ d.get( trigger.topic.split('/')[2],'' ) }}",
-                  "unique_id": "{{ trigger.topic.split('/')[0]}}_{{ trigger.topic.split('/')[1]}}_{{ trigger.topic.split('/')[2]}}",
-                  "device": {
-                    "identifiers": ["bsc_{{ trigger.topic.split('/')[0]}}"],
-                    "name": "BSC",
-                    "manufacturer": "BSC",
-                    "model": "BSC",
-                    "sw_version": "n/a",
-                    "hw_version": "n/a",
-                    "configuration_url": "https://github.com/dominikfe/ha_bsc_discovery_automation"
-                  }
-                }
-            alias: Inverter
-        alias: Inverter
-      - conditions:
-          - condition: trigger
-            id:
-              - Trigger
-        sequence:
-          - action: mqtt.publish
-            data:
-              qos: 0
-              topic: >-
-                homeassistant/sensor/{{ trigger.topic.split('/')[0]}}/{{
-                trigger.topic.split('/')[1]}}_{{
-                trigger.topic.split('/')[2]}}/config
-              retain: true
-              payload: |-
-                {
-                  "name": "Trigger {{trigger.topic.split('/')[2]}}",
-                  "state_topic": "{{ trigger.topic }}",
-                  "state_color": "true",
-                  "unique_id": "{{ trigger.topic.split('/')[0]}}_{{ trigger.topic.split('/')[1]}}_{{ trigger.topic.split('/')[2]}}",
-                  "device": {
-                    "identifiers": ["bsc_{{ trigger.topic.split('/')[0]}}"],
-                    "name": "BSC",
-                    "manufacturer": "BSC",
-                    "model": "BSC",
-                    "sw_version": "n/a",
-                    "hw_version": "n/a",
-                    "configuration_url": "https://github.com/dominikfe/ha_bsc_discovery_automation"
-                  }
-                }
-            alias: Inverter
-        alias: Trigger
-      - conditions:
-          - condition: trigger
-            id:
-              - DataDeviceTemperatures
-        sequence:
-          - action: mqtt.publish
-            data:
-              qos: 0
-              topic: >-
-                homeassistant/sensor/{{ trigger.topic.split('/')[0]}}{{
-                trigger.topic.split('/')[1]}}{{trigger.topic.split('/')[2]}}/{{trigger.topic.split('/')[3]}}{{trigger.topic.split('/')[4]}}/config
-              retain: true
-              payload: |-
-                {
-                  "name": "Temperature Sensor {{ trigger.topic.split('/')[4]|int +1}}",
-                  "state_topic": "{{ trigger.topic }}",
-                  "device_class": "temperature",
-                  "state_class": "measurement",
-                  "value_template": "{% raw %} {{ value }} {% endraw %}",
-                  "unit_of_measurement": "°C",
-                  "unique_id": "{{trigger.topic.split('/')[0]}}_{{trigger.topic.split('/')[1]}}_{{trigger.topic.split('/')[2]}}_{{trigger.topic.split('/')[3]}}_{{trigger.topic.split('/')[4]}}",
-                  "device": {
-                    "identifiers": ["{{trigger.topic.split('/')[0]}}_{{trigger.topic.split('/')[1]}}_{{trigger.topic.split('/')[2]}}"],
-                    "name": "BSC {{trigger.topic.split('/')[1]}} {{trigger.topic.split('/')[2]}}",
-                    "manufacturer": "BSC",
-                    "model": "BSC",
-                    "sw_version": "n/a",
-                    "hw_version": "n/a",
-                    "configuration_url": "https://github.com/dominikfe/ha_bsc_discovery_automation"
-                  }
-                }
-            alias: Temperatures
-        alias: Temperatures
-      - conditions:
-          - condition: and
-            conditions:
-              - condition: template
-                value_template: "{{ trigger.payload != '0' }}"
-          - condition: trigger
-            id:
-              - CellVoltages
-        sequence:
-          - action: mqtt.publish
-            data:
-              qos: 0
-              topic: >-
-                homeassistant/sensor/{{
-                trigger.topic.split('/')[0]}}{{trigger.topic.split('/')[1]}}{{trigger.topic.split('/')[2]}}/{{trigger.topic.split('/')[3]}}{{trigger.topic.split('/')[4]}}{{trigger.topic.split('/')[5]}}/config
-              retain: true
-              payload: |-
-                {
-                  "name": "Cell {% if trigger.topic.split('/')[4]|int < 9 %}0{% else %}{% endif %}{{ trigger.topic.split('/')[4]|int +1}} Voltage",
-                  "state_topic": "{{ trigger.topic }}",
-                  "device_class": "voltage",
-                  "state_class": "measurement",
-                  "value_templatee": "{% raw %} {{ value|int / 1000 }} {% endraw %}",
-                  "dsp_prc": "4",
-                  "unit_of_measurement": "V",
-                  "unique_id": "{{ trigger.topic.split('/')[0]}}_{{ trigger.topic.split('/')[1]}}_{{ trigger.topic.split('/')[2]}}_{{trigger.topic.split('/')[3]}}{% if trigger.topic.split('/')[4]|int < 9 %}0{% else %}{% endif %}{{ trigger.topic.split('/')[4]|int +1}}",
-                  "device": {
-                    "identifiers": ["{{trigger.topic.split('/')[0]}}_{{trigger.topic.split('/')[1]}}_{{trigger.topic.split('/')[2]}}"],
-                    "name": "BSC {{trigger.topic.split('/')[1]}} {{trigger.topic.split('/')[2]}}",
-                    "manufacturer": "BSC",
-                    "model": "BSC",
-                    "sw_version": "n/a",
-                    "hw_version": "n/a",
-                    "configuration_url": "https://github.com/dominikfe/ha_bsc_discovery_automation"
-                  }
-                }
-            alias: cellVoltages
-        alias: CellVoltages
-      - conditions:
-          - condition: template
-            value_template: >-
-              {{ trigger.topic.split('/')[3] != "cellVoltage" and
-              trigger.topic.split('/')[3] != "valid"}}
-        sequence:
-          - action: mqtt.publish
-            data:
-              qos: 0
-              topic: >-
-                homeassistant/sensor/{{
-                trigger.topic.split('/')[0]}}{{trigger.topic.split('/')[1]}}{{trigger.topic.split('/')[2]}}/{{trigger.topic.split('/')[3]}}/config
-              retain: true
-              payload: |-
-                {
-                  "name": "{{trigger.topic.split('/')[3]}}",
-                  "state_topic": "{{ trigger.topic}}",
-                  {% set d = { 'SoC': 'battery', 'balancingCurrent': 'current', 'cellVoltageMax': 'voltage', 'cellVoltageMin': 'voltage', 'cellVoltageMax': 'voltage', 'maxCellDifferenceVoltage': 'voltage', 'totalCurrent': 'current', 'totalVoltage': 'voltage'} %}{% if d.get( trigger.topic.split('/')[3],'') %}"device_class":"{{ d.get( trigger.topic.split('/')[3]) }}",{% endif %}      
-                  "state_class": "measurement",
-                  "unit_of_measurement": "{% set d = {'SoC': '%', 'balancingCurrent': 'A', 'cellVoltageMax': 'V', 'cellVoltageMin': 'V', 'cellVoltageMax': 'V', 'maxCellDifferenceVoltage': 'mV', 'totalCurrent': 'A', 'totalVoltage': 'V'} %}{{ d.get( trigger.topic.split('/')[3],'') }}",
-                  "unique_id": "bsc_{{ trigger.topic.split('/')[2]}}_{{ trigger.topic.split('/')[3]}}",
-                  "device": {
-                    "identifiers": ["{{trigger.topic.split('/')[0]}}_{{trigger.topic.split('/')[1]}}_{{trigger.topic.split('/')[2]}}"],
-                    "name": "BSC {{trigger.topic.split('/')[1]}} {{trigger.topic.split('/')[2]}}",
-                    "manufacturer": "BSC",
-                    "model": "BSC",
-                    "sw_version": "n/a",
-                    "hw_version": "n/a",
-                    "configuration_url": "https://github.com/dominikfe/ha_bsc_discovery_automation"
-                  }
-                }
-            alias: Rest
-        alias: Rest
-mode: parallel
-max: 10
+views:
+  - title: JK old
+    path: pack-1
+    visible:
+      - user: 7f0f2d686ba3469f8c2c69c76321dc7f
+    cards:
+      - type: custom:stack-in-card
+        keep:
+          margin: false
+          box_shadow: false
+          background: false
+        cards:
+          - type: grid
+            square: false
+            columns: 1
+            cards:
+              - type: markdown
+                content: >-
+                  <center>Time:&nbsp;<b><font color=#3090C7>{{
+                  states('sensor.jk_bms_pack_1_total_runtime_formatted') | upper
+                  }}</font>
+          - type: grid
+            square: false
+            columns: 3
+            cards:
+              - type: markdown
+                content: >-
+                  <center>Charge:&nbsp;<b>{% if
+                  states('binary_sensor.jk_bms_pack_1_charging') == 'on' %}
+                  <font color=#41CD52>{{
+                  states('binary_sensor.jk_bms_pack_1_charging') | upper
+                  }}</font> {% else %} <font color=red>{{
+                  states('binary_sensor.jk_bms_pack_1_charging') | upper
+                  }}</font> {% endif %} 
+              - type: markdown
+                content: >-
+                  <center>Discharge:&nbsp;<b> {% if
+                  states('binary_sensor.jk_bms_pack_1_discharging') == 'on' %}
+                  <font color=#41CD52>{{
+                  states('binary_sensor.jk_bms_pack_1_discharging') | upper
+                  }}</font> {% else %} <font color=red>{{
+                  states('binary_sensor.jk_bms_pack_1_discharging') | upper
+                  }}</font> {% endif %} 
+              - type: markdown
+                content: >-
+                  <center>Balance:&nbsp;<b> {% if
+                  states('binary_sensor.jk_bms_pack_1_balancing') == 'on' %}
+                  <font color=#41CD52>{{
+                  states('binary_sensor.jk_bms_pack_1_balancing') | upper
+                  }}</font> {% else %} <font color=red>{{
+                  states('binary_sensor.jk_bms_pack_1_balancing') | upper
+                  }}</font> {% endif %} 
+      - type: custom:stack-in-card
+        keep:
+          margin: false
+          box_shadow: false
+          background: false
+        cards:
+          - type: grid
+            square: false
+            columns: 2
+            cards:
+              - type: markdown
+                content: >-
+                  <center><b><font color=#41CD52 size=6>{{
+                  states('sensor.jk_bms_pack_1_total_voltage') }}
+                  V</font></b><br> Battery Power:&nbsp;&nbsp;<font
+                  color=#41CD52>{{ states('sensor.jk_bms_pack_1_power') }}
+                  W</font><br> Battery Capacity:&nbsp;&nbsp;<font
+                  color=#41CD52>{{
+                  states('sensor.jk_bms_pack_1_total_battery_capacity_setting')
+                  }} Ah</font><br> Cycle Capacity:&nbsp;&nbsp;<font
+                  color=#41CD52>{{
+                  states('sensor.jk_bms_pack_1_total_charging_cycle_capacity')
+                  }} Ah</font><br> Ave. Cell Vol.:&nbsp;&nbsp;<font
+                  color=#41CD52>{{
+                  states('sensor.jk_bms_pack_1_average_cell_voltage') }}
+                  V</font><br> Balance Cur.:&nbsp;&nbsp;<font color=#41CD52>{{
+                  states('sensor.jk_bms_pack_1_balancing_current') }}
+                  A</font><br> Battery T1:&nbsp;&nbsp;<font color=#41CD52>{{
+                  states('sensor.jk_bms_pack_1_temperature_sensor_1') }}
+                  °C</font>
+              - type: markdown
+                content: >-
+                  <center><b><font color=#41CD52 size=6>{{
+                  states('sensor.jk_bms_pack_1_current') }} A</font></b><br>
+                  Remain Battery:&nbsp;&nbsp;<font color=#41CD52>{{
+                  states('sensor.jk_bms_pack_1_state_of_charge') }} %</font><br>
+                  Remain Capacity:&nbsp;&nbsp;<font color=#41CD52>{{
+                  states('sensor.jk_bms_pack_1_capacity_remaining') }}
+                  Ah</font><br> Cycle Count:&nbsp;&nbsp;<font color=#41CD52>{{
+                  states('sensor.jk_bms_pack_1_charging_cycles') }}</font><br>
+                  Delta Cell Vol.:&nbsp;&nbsp;<font color=#41CD52>{{
+                  states('sensor.jk_bms_pack_1_delta_cell_voltage') }}
+                  V</font><br> MOS Temp.:&nbsp;&nbsp;<font color=#41CD52>{{
+                  states('sensor.jk_bms_pack_1_power_tube_temperature') }}
+                  °C</font><br> Battery T2:&nbsp;&nbsp;<font color=#41CD52>{{
+                  states('sensor.jk_bms_pack_1_temperature_sensor_2') }}
+                  °C</font>
+      - type: entities
+        entities:
+          - entity: switch.jk_bms_pack_1_balancer
+            name: Balancer
+          - entity: switch.jk_bms_pack_1_charging
+            name: Charging
+          - entity: switch.jk_bms_pack_1_discharging
+            name: Discharging
+        show_header_toggle: false
+      - type: custom:stack-in-card
+        keep:
+          margin: false
+          box_shadow: false
+          background: false
+        cards:
+          - type: grid
+            square: false
+            columns: 1
+            cards:
+              - type: markdown
+                content: <center><b>Cells
+          - type: grid
+            square: false
+            columns: 2
+            cards:
+              - type: markdown
+                content: >-
+                  <center>01.&nbsp;&nbsp;&nbsp; {% if
+                  states('sensor.jk_bms_pack_1_max_voltage_cell') == '1' %} 
+                  <font color="#3090C7">{{
+                  states('sensor.jk_bms_pack_1_cell_voltage_1') }} V</font> {%
+                  elif states('sensor.jk_bms_pack_1_min_voltage_cell') == '1'
+                  %}  <font color="red">{{
+                  states('sensor.jk_bms_pack_1_cell_voltage_1') }} V</font> {%
+                  else %} {{ states('sensor.jk_bms_pack_1_cell_voltage_1') }} V
+                  {% endif %} &nbsp;&nbsp;&nbsp;/&nbsp;&nbsp;&nbsp; {{
+                  states('sensor.jk_bms_pack_1_cell_resistance_1') }} Ω <br>
+                  02.&nbsp;&nbsp;&nbsp; {% if
+                  states('sensor.jk_bms_pack_1_max_voltage_cell') == '2' %} 
+                  <font color="#3090C7">{{
+                  states('sensor.jk_bms_pack_1_cell_voltage_2') }} V</font> {%
+                  elif states('sensor.jk_bms_pack_1_min_voltage_cell') == '2' %}
+                  <font color="red">{{
+                  states('sensor.jk_bms_pack_1_cell_voltage_2') }} V</font> {%
+                  else %} {{ states('sensor.jk_bms_pack_1_cell_voltage_2') }} V
+                  {% endif %} &nbsp;&nbsp;&nbsp;/&nbsp;&nbsp;&nbsp; {{
+                  states('sensor.jk_bms_pack_1_cell_resistance_2') }} Ω <br>
+                  03.&nbsp;&nbsp;&nbsp; {% if
+                  states('sensor.jk_bms_pack_1_max_voltage_cell') == '3' %} 
+                  <font color="#3090C7">{{
+                  states('sensor.jk_bms_pack_1_cell_voltage_3') }} V</font> {%
+                  elif states('sensor.jk_bms_pack_1_min_voltage_cell') == '3' %}
+                  <font color="red">{{
+                  states('sensor.jk_bms_pack_1_cell_voltage_3') }} V</font> {%
+                  else %} {{ states('sensor.jk_bms_pack_1_cell_voltage_3') }} V
+                  {% endif %} &nbsp;&nbsp;&nbsp;/&nbsp;&nbsp;&nbsp; {{
+                  states('sensor.jk_bms_pack_1_cell_resistance_3') }} Ω <br>
+                  04.&nbsp;&nbsp;&nbsp; {% if
+                  states('sensor.jk_bms_pack_1_max_voltage_cell') == '4' %} 
+                  <font color="#3090C7">{{
+                  states('sensor.jk_bms_pack_1_cell_voltage_4') }} V</font> {%
+                  elif states('sensor.jk_bms_pack_1_min_voltage_cell') == '4' %}
+                  <font color="red">{{
+                  states('sensor.jk_bms_pack_1_cell_voltage_4') }} V</font> {%
+                  else %} {{ states('sensor.jk_bms_pack_1_cell_voltage_4') }} V
+                  {% endif %} &nbsp;&nbsp;&nbsp;/&nbsp;&nbsp;&nbsp; {{
+                  states('sensor.jk_bms_pack_1_cell_resistance_4') }} Ω <br>
+                  05.&nbsp;&nbsp;&nbsp; {% if
+                  states('sensor.jk_bms_pack_1_max_voltage_cell') == '5' %} 
+                  <font color="#3090C7">{{
+                  states('sensor.jk_bms_pack_1_cell_voltage_5') }} V</font> {%
+                  elif states('sensor.jk_bms_pack_1_min_voltage_cell') == '5' %}
+                  <font color="red">{{
+                  states('sensor.jk_bms_pack_1_cell_voltage_5') }} V</font> {%
+                  else %} {{ states('sensor.jk_bms_pack_1_cell_voltage_5') }} V
+                  {% endif %} &nbsp;&nbsp;&nbsp;/&nbsp;&nbsp;&nbsp; {{
+                  states('sensor.jk_bms_pack_1_cell_resistance_5') }} Ω <br>
+                  06.&nbsp;&nbsp;&nbsp; {% if
+                  states('sensor.jk_bms_pack_1_max_voltage_cell') == '6' %} 
+                  <font color="#3090C7">{{
+                  states('sensor.jk_bms_pack_1_cell_voltage_6') }} V</font> {%
+                  elif states('sensor.jk_bms_pack_1_min_voltage_cell') == '6' %}
+                  <font color="red">{{
+                  states('sensor.jk_bms_pack_1_cell_voltage_6') }} V</font> {%
+                  else %} {{ states('sensor.jk_bms_pack_1_cell_voltage_6') }} V
+                  {% endif %} &nbsp;&nbsp;&nbsp;/&nbsp;&nbsp;&nbsp; {{
+                  states('sensor.jk_bms_pack_1_cell_resistance_6') }} Ω <br>
+                  07.&nbsp;&nbsp;&nbsp; {% if
+                  states('sensor.jk_bms_pack_1_max_voltage_cell') == '7' %} 
+                  <font color="#3090C7">{{
+                  states('sensor.jk_bms_pack_1_cell_voltage_7') }} V</font> {%
+                  elif states('sensor.jk_bms_pack_1_min_voltage_cell') == '7' %}
+                  <font color="red">{{
+                  states('sensor.jk_bms_pack_1_cell_voltage_7') }} V</font> {%
+                  else %} {{ states('sensor.jk_bms_pack_1_cell_voltage_7') }} V
+                  {% endif %} &nbsp;&nbsp;&nbsp;/&nbsp;&nbsp;&nbsp; {{
+                  states('sensor.jk_bms_pack_1_cell_resistance_7') }} Ω <br>
+                  08.&nbsp;&nbsp;&nbsp; {% if
+                  states('sensor.jk_bms_pack_1_max_voltage_cell') == '8' %} 
+                  <font color="#3090C7">{{
+                  states('sensor.jk_bms_pack_1_cell_voltage_8') }} V</font> {%
+                  elif states('sensor.jk_bms_pack_1_min_voltage_cell') == '8' %}
+                  <font color="red">{{
+                  states('sensor.jk_bms_pack_1_cell_voltage_8') }} V</font> {%
+                  else %} {{ states('sensor.jk_bms_pack_1_cell_voltage_8') }} V
+                  {% endif %} &nbsp;&nbsp;&nbsp;/&nbsp;&nbsp;&nbsp; {{
+                  states('sensor.jk_bms_pack_1_cell_resistance_8') }} Ω
+                  <br></center>
+              - type: markdown
+                content: >-
+                  <center>09.&nbsp;&nbsp;&nbsp; {% if
+                  states('sensor.jk_bms_pack_1_max_voltage_cell') == '9' %} 
+                  <font color="#3090C7">{{
+                  states('sensor.jk_bms_pack_1_cell_voltage_9') }} V</font> {%
+                  elif states('sensor.jk_bms_pack_1_min_voltage_cell') == '9'
+                  %}  <font color="red">{{
+                  states('sensor.jk_bms_pack_1_cell_voltage_9') }} V</font> {%
+                  else %} {{ states('sensor.jk_bms_pack_1_cell_voltage_9') }} V
+                  {% endif %} &nbsp;&nbsp;&nbsp;/&nbsp;&nbsp;&nbsp; {{
+                  states('sensor.jk_bms_pack_1_cell_resistance_9') }} Ω <br>
+                  10.&nbsp;&nbsp;&nbsp; {% if
+                  states('sensor.jk_bms_pack_1_max_voltage_cell') == '10' %} 
+                  <font color="#3090C7">{{
+                  states('sensor.jk_bms_pack_1_cell_voltage_10') }} V</font> {%
+                  elif states('sensor.jk_bms_pack_1_min_voltage_cell') == '10'
+                  %} <font color="red">{{
+                  states('sensor.jk_bms_pack_1_cell_voltage_10') }} V</font> {%
+                  else %} {{ states('sensor.jk_bms_pack_1_cell_voltage_10') }} V
+                  {% endif %} &nbsp;&nbsp;&nbsp;/&nbsp;&nbsp;&nbsp; {{
+                  states('sensor.jk_bms_pack_1_cell_resistance_10') }} Ω <br>
+                  11.&nbsp;&nbsp;&nbsp; {% if
+                  states('sensor.jk_bms_pack_1_max_voltage_cell') == '11' %} 
+                  <font color="#3090C7">{{
+                  states('sensor.jk_bms_pack_1_cell_voltage_11') }} V</font> {%
+                  elif states('sensor.jk_bms_pack_1_min_voltage_cell') == '11'
+                  %} <font color="red">{{
+                  states('sensor.jk_bms_pack_1_cell_voltage_11') }} V</font> {%
+                  else %} {{ states('sensor.jk_bms_pack_1_cell_voltage_11') }} V
+                  {% endif %} &nbsp;&nbsp;&nbsp;/&nbsp;&nbsp;&nbsp; {{
+                  states('sensor.jk_bms_pack_1_cell_resistance_11') }} Ω <br>
+                  12.&nbsp;&nbsp;&nbsp; {% if
+                  states('sensor.jk_bms_pack_1_max_voltage_cell') == '12' %} 
+                  <font color="#3090C7">{{
+                  states('sensor.jk_bms_pack_1_cell_voltage_12') }} V</font> {%
+                  elif states('sensor.jk_bms_pack_1_min_voltage_cell') == '12'
+                  %} <font color="red">{{
+                  states('sensor.jk_bms_pack_1_cell_voltage_12') }} V</font> {%
+                  else %} {{ states('sensor.jk_bms_pack_1_cell_voltage_12') }} V
+                  {% endif %} &nbsp;&nbsp;&nbsp;/&nbsp;&nbsp;&nbsp; {{
+                  states('sensor.jk_bms_pack_1_cell_resistance_12') }} Ω <br>
+                  13.&nbsp;&nbsp;&nbsp; {% if
+                  states('sensor.jk_bms_pack_1_max_voltage_cell') == '13' %} 
+                  <font color="#3090C7">{{
+                  states('sensor.jk_bms_pack_1_cell_voltage_13') }} V</font> {%
+                  elif states('sensor.jk_bms_pack_1_min_voltage_cell') == '13'
+                  %} <font color="red">{{
+                  states('sensor.jk_bms_pack_1_cell_voltage_13') }} V</font> {%
+                  else %} {{ states('sensor.jk_bms_pack_1_cell_voltage_13') }} V
+                  {% endif %} &nbsp;&nbsp;&nbsp;/&nbsp;&nbsp;&nbsp; {{
+                  states('sensor.jk_bms_pack_1_cell_resistance_13') }} Ω <br>
+                  14.&nbsp;&nbsp;&nbsp; {% if
+                  states('sensor.jk_bms_pack_1_max_voltage_cell') == '14' %} 
+                  <font color="#3090C7">{{
+                  states('sensor.jk_bms_pack_1_cell_voltage_14') }} V</font> {%
+                  elif states('sensor.jk_bms_pack_1_min_voltage_cell') == '14'
+                  %} <font color="red">{{
+                  states('sensor.jk_bms_pack_1_cell_voltage_14') }} V</font> {%
+                  else %} {{ states('sensor.jk_bms_pack_1_cell_voltage_14') }} V
+                  {% endif %} &nbsp;&nbsp;&nbsp;/&nbsp;&nbsp;&nbsp; {{
+                  states('sensor.jk_bms_pack_1_cell_resistance_14') }} Ω <br>
+                  15.&nbsp;&nbsp;&nbsp; {% if
+                  states('sensor.jk_bms_pack_1_max_voltage_cell') == '15' %} 
+                  <font color="#3090C7">{{
+                  states('sensor.jk_bms_pack_1_cell_voltage_15') }} V</font> {%
+                  elif states('sensor.jk_bms_pack_1_min_voltage_cell') == '15'
+                  %} <font color="red">{{
+                  states('sensor.jk_bms_pack_1_cell_voltage_15') }} V</font> {%
+                  else %} {{ states('sensor.jk_bms_pack_1_cell_voltage_15') }} V
+                  {% endif %} &nbsp;&nbsp;&nbsp;/&nbsp;&nbsp;&nbsp; {{
+                  states('sensor.jk_bms_pack_1_cell_resistance_15') }} Ω <br>
+                  16.&nbsp;&nbsp;&nbsp; {% if
+                  states('sensor.jk_bms_pack_1_max_voltage_cell') == '16' %} 
+                  <font color="#3090C7">{{
+                  states('sensor.jk_bms_pack_1_cell_voltage_16') }} V</font> {%
+                  elif states('sensor.jk_bms_pack_1_min_voltage_cell') == '16'
+                  %} <font color="red">{{
+                  states('sensor.jk_bms_pack_1_cell_voltage_16') }} V</font> {%
+                  else %} {{ states('sensor.jk_bms_pack_1_cell_voltage_16') }} V
+                  {% endif %} &nbsp;&nbsp;&nbsp;/&nbsp;&nbsp;&nbsp; {{
+                  states('sensor.jk_bms_pack_1_cell_resistance_16') }} Ω
+                  <br></center>
+      - chart_type: line
+        period: 5minute
+        type: statistics-graph
+        entities:
+          - sensor.jk_bms_pack_1_cell_voltage_1
+          - sensor.jk_bms_pack_1_cell_voltage_2
+          - sensor.jk_bms_pack_1_cell_voltage_3
+          - sensor.jk_bms_pack_1_cell_voltage_4
+          - sensor.jk_bms_pack_1_cell_voltage_5
+          - sensor.jk_bms_pack_1_cell_voltage_6
+          - sensor.jk_bms_pack_1_cell_voltage_7
+          - sensor.jk_bms_pack_1_cell_voltage_8
+          - sensor.jk_bms_pack_1_cell_voltage_9
+          - sensor.jk_bms_pack_1_cell_voltage_10
+          - sensor.jk_bms_pack_1_cell_voltage_11
+          - sensor.jk_bms_pack_1_cell_voltage_12
+          - sensor.jk_bms_pack_1_cell_voltage_13
+          - sensor.jk_bms_pack_1_cell_voltage_14
+          - sensor.jk_bms_pack_1_cell_voltage_15
+          - sensor.jk_bms_pack_1_cell_voltage_16
+        stat_types:
+          - max
+        hide_legend: true
+        title: Pack 2 Cells
+        days_to_show: 0.04
+      - chart_type: line
+        period: 5minute
+        type: statistics-graph
+        entities:
+          - sensor.jk_bms_pack_1_delta_cell_voltage
+        stat_types:
+          - max
+        days_to_show: 1
+        title: Delta
+        hide_legend: true
+    icon: ''
+    type: masonry
+
+    max_columns: 4
+    path: ''
+    icon: mdi:view-dashboard-variant-outline
+    visible:
+      - user: 7f0f2d686ba3469f8c2c69c76321dc7f
+      - user: b44101a9b4f8476c91a5be844cb6bf99
+    sections:
+      - type: grid
+        cards:
+          - type: heading
+            icon: ''
+            heading: Wetter
+            heading_style: title
+          - show_current: true
+            show_forecast: true
+            type: weather-forecast
+            entity: weather.home
+            forecast_type: daily
+            forecast_slots: 5
+            name: Polling
+            grid_options:
+              columns: 12
+              rows: 3
+      - type: grid
+        cards:
+          - type: heading
+            heading: Medien
+            heading_style: title
+          - type: tile
+            tap_action:
+              action: perform-action
+              perform_action: media_player.play_media
+              target:
+                device_id:
+                  - 316031a46d205b1752fdd86e61cca91d
+              data:
+                media_content_id: http://cdn-peer032.streaming-pro.com:8024/ibizaglobalradio.mp3
+                media_content_type: music
+                extra:
+                  title: Ibiza Global Radios
+                  thumb: >-
+                    https://www.ibizaglobalradio.com/dist/img/logo-igr-black-new.svg
+            icon_tap_action:
+              action: none
+            hold_action:
+              action: none
+            entity: media_player.wohnzimmer
+            name: Ibiza Global Radio
+            icon: https://www.ibizaglobalradio.com/dist/img/logo-igr-black-new.svg
+            vertical: false
+            show_entity_picture: false
+            hide_state: true
+            features_position: bottom
+          - features:
+              - type: media-player-volume-slider
+            type: tile
+            features_position: bottom
+            vertical: false
+            entity: media_player.wohnzimmer
+          - type: tile
+            features_position: bottom
+            vertical: false
+            entity: media_player.sonos_move
+            icon: mdi:speaker-stop
+            name: Alles aus
+            tap_action:
+              action: perform-action
+              perform_action: media_player.media_stop
+              target:
+                device_id:
+                  - d2fc9f1ca2de9f91ef883630adaa221b
+                  - 316031a46d205b1752fdd86e61cca91d
+                  - 71b51020a1c961484416737ab9907420
+                  - f06b0090bdd963c8a5c94746b1e1e659
+                  - 9e36d1388942841a14112a291c17db09
+            hide_state: true
+    badges:
+      - type: entity
+        show_name: false
+        show_state: true
+        show_icon: true
+        entity: sensor.netzleistung
+        icon: mdi:transmission-tower-import
+        visibility:
+          - condition: numeric_state
+            entity: sensor.netzleistung
+            below: 0
+        color: green
+      - type: entity
+        show_name: false
+        show_state: true
+        show_icon: true
+        entity: sensor.netzleistung
+        icon: mdi:transmission-tower-export
+        visibility:
+          - condition: numeric_state
+            entity: sensor.netzleistung
+            above: 0
+        color: red
+      - type: entity
+        show_name: false
+        show_state: true
+        show_icon: true
+        entity: sensor.hausverbrauch
+        icon: mdi:home-import-outline
+      - type: entity
+        show_name: false
+        show_state: true
+        show_icon: true
+        entity: sensor.victron_pvinverter_power_total_20
+        icon: mdi:home-circle-outline
+      - type: entity
+        show_name: false
+        show_state: true
+        show_icon: true
+        entity: sensor.victron_pvinverter_power_total_34
+        icon: mdi:wall
+      - type: entity
+        show_name: false
+        show_state: true
+        show_icon: true
+        entity: sensor.victron_system_battery_power
+        icon: mdi:battery-arrow-down-outline
+        visibility:
+          - condition: numeric_state
+            entity: sensor.victron_system_battery_power
+            below: 0
+        color: red
+      - type: entity
+        show_name: false
+        show_state: true
+        show_icon: true
+        entity: sensor.victron_system_battery_power
+        icon: mdi:battery-arrow-up-outline
+        visibility:
+          - condition: numeric_state
+            entity: sensor.victron_system_battery_power
+            above: 0
+        color: green
+      - type: entity
+        show_name: false
+        show_state: true
+        show_icon: true
+        entity: sensor.bsc_soc
+      - type: entity
+        show_name: false
+        show_state: true
+        show_icon: true
+        entity: sensor.openwb_chargepoint_4_ladung
+        icon: mdi:car-electric-outline
+        visibility:
+          - condition: state
+            entity: binary_sensor.openwb_chargepoint_4_ladekabel
+            state: 'on'
+      - type: entity
+        show_name: false
+        show_state: true
+        show_icon: true
+        entity: sensor.openwb_chargepoint_4_ladeleistung
+        visibility:
+          - condition: state
+            entity: binary_sensor.openwb_chargepoint_4_ladekabel
+            state: 'on'
+      - type: entity
+        show_name: true
+        show_state: false
+        show_icon: true
+        entity: sensor.restmull
+        color: grey
+        visibility:
+          - condition: state
+            entity: sensor.restmull
+            state: Morgen
+        name: morgen
+      - type: entity
+        show_name: true
+        show_state: false
+        show_icon: true
+        color: blue
+        visibility:
+          - condition: state
+            entity: sensor.restmull
+            state: Morgen
+        name: morgen
+        entity: sensor.papiersammlung
+      - type: entity
+        show_name: true
+        show_state: true
+        show_icon: true
+        color: brown
+        visibility:
+          - condition: state
+            entity: sensor.restmull
+            state: Morgen
+        name: Bio
+        icon: mdi:leaf
+        entity: sensor.biomull
+      - type: entity
+        show_name: true
+        show_state: false
+        show_icon: true
+        color: yellow
+        visibility:
+          - condition: state
+            entity: sensor.restmull
+            state: Morgen
+        name: morgen
+        entity: sensor.gelber_sack
+        icon: mdi:sack
+      - type: entity
+        show_name: false
+        show_state: true
+        show_icon: true
+        entity: lock.aqara_smart_lock_u200
+        tap_action:
+          action: perform-action
+          perform_action: lock.lock
+          target:
+            device_id: 586708652219780740c41155e162f479
+      - type: entity
+        show_name: true
+        show_state: false
+        show_icon: true
+        entity: person.dominik
+        icon: ''
+        name: Dominik
