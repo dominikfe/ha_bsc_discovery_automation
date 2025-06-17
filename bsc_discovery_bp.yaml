@@ -49,6 +49,7 @@ actions:
                 homeassistant/sensor/{{ trigger.topic.split('/')[0]}}/{{
                 trigger.topic.split('/')[1]}}_{{
                 trigger.topic.split('/')[2]}}/config
+              retain: true
               payload: |-
                 {
                   "name": "{{trigger.topic.split('/')[2]}}",
@@ -81,6 +82,7 @@ actions:
                 homeassistant/sensor/{{ trigger.topic.split('/')[0]}}/{{
                 trigger.topic.split('/')[1]}}_{{
                 trigger.topic.split('/')[2]}}/config
+              retain: true
               payload: |-
                 {
                   "name": "Trigger {{trigger.topic.split('/')[2]}}",
@@ -110,6 +112,7 @@ actions:
               topic: >-
                 homeassistant/sensor/{{ trigger.topic.split('/')[0]}}{{
                 trigger.topic.split('/')[1]}}{{trigger.topic.split('/')[2]}}/{{trigger.topic.split('/')[3]}}{{trigger.topic.split('/')[4]}}/config
+              retain: true
               payload: |-
                 {
                   "name": "Temperature Sensor {{ trigger.topic.split('/')[4]|int +1}}",
@@ -146,13 +149,15 @@ actions:
               topic: >-
                 homeassistant/sensor/{{
                 trigger.topic.split('/')[0]}}{{trigger.topic.split('/')[1]}}{{trigger.topic.split('/')[2]}}/{{trigger.topic.split('/')[3]}}{{trigger.topic.split('/')[4]}}{{trigger.topic.split('/')[5]}}/config
+              retain: true
               payload: |-
                 {
                   "name": "Cell {% if trigger.topic.split('/')[4]|int < 9 %}0{% else %}{% endif %}{{ trigger.topic.split('/')[4]|int +1}} Voltage",
                   "state_topic": "{{ trigger.topic }}",
                   "device_class": "voltage",
                   "state_class": "measurement",
-                  "value_template": "{% raw %} {{ value|int / 1000 }} {% endraw %}",
+                  "value_templatee": "{% raw %} {{ value|int / 1000 }} {% endraw %}",
+                  "dsp_prc": "4",
                   "unit_of_measurement": "V",
                   "unique_id": "{{ trigger.topic.split('/')[0]}}_{{ trigger.topic.split('/')[1]}}_{{ trigger.topic.split('/')[2]}}_{{trigger.topic.split('/')[3]}}{% if trigger.topic.split('/')[4]|int < 9 %}0{% else %}{% endif %}{{ trigger.topic.split('/')[4]|int +1}}",
                   "device": {
@@ -179,6 +184,7 @@ actions:
               topic: >-
                 homeassistant/sensor/{{
                 trigger.topic.split('/')[0]}}{{trigger.topic.split('/')[1]}}{{trigger.topic.split('/')[2]}}/{{trigger.topic.split('/')[3]}}/config
+              retain: true
               payload: |-
                 {
                   "name": "{{trigger.topic.split('/')[3]}}",
